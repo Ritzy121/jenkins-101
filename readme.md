@@ -32,14 +32,12 @@ docker run --name jenkins-blueocean --restart=on-failure --detach \
 
 ### Windows
 ```
-docker run --name jenkins-blueocean --restart=on-failure --detach `
-  --network jenkins --env DOCKER_HOST=tcp://docker:2376 `
-  --env DOCKER_CERT_PATH=/certs/client --env DOCKER_TLS_VERIFY=1 `
-  --volume jenkins-data:/var/jenkins_home `
-  --volume jenkins-docker-certs:/certs/client:ro `
-  --publish 8080:8080 --publish 50000:50000 myjenkins-blueocean:2.414.2
-```
+Didn't work
+docker run --name jenkins-blueocean --restart=on-failure --detach --network jenkins --env DOCKER_HOST=tcp://docker:2376 --env DOCKER_CERT_PATH=/certs/client --env DOCKER_TLS_VERIFY=0 --volume jenkins-data:/var/jenkins_home --volume jenkins-docker-certs:/certs/client:ro --publish 8080:8080 --publish 50000:50000 myjenkins-blueocean:2.414.2
 
+Worked. See this url # https://github.com/docker-java/docker-java/issues/480
+docker run --name jenkins-blueocean --restart=on-failure --detach --network jenkins --env DOCKER_HOST=tcp://docker:2376 --env DOCKER_CERT_PATH=/certs/client --env DOCKER_TLS_VERIFY=0 --volume jenkins-data:/var/jenkins_home --volume jenkins-docker-certs:/certs/client:ro --publish 8080:8080 --publish 50000:50000 myjenkins-blueocean:2.414.2
+```
 
 ## Get the Password
 ```
@@ -59,11 +57,53 @@ https://www.jenkins.io/doc/book/installing/docker/
 
 https://stackoverflow.com/questions/47709208/how-to-find-docker-host-uri-to-be-used-in-jenkins-docker-plugin
 ```
-docker run -d --restart=always -p 127.0.0.1:2376:2375 --network jenkins -v /var/run/docker.sock:/var/run/docker.sock alpine/socat tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock
-docker inspect <container_id> | grep IPAddress
+docker run -d --restart=always -p 127.0.0.1:2376:2375 --network jenkins -v /var/run/docker.sock:/var/run/docker.sock alpine/socat tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock 
+docker inspect <contain id> | grep IPAddress
+
+
+tcp://172.18.0.3:2375
+
+Git token in docker image
+8bab2f334ede31a34b446e9a2db23c61
 ```
 
 ## Using my Jenkins Python Agent
 ```
 docker pull devopsjourney1/myjenkinsagents:python
 ```
+
+## Update Jenkins in Docker Image
+First identify your image.
+```console
+$ docker ps --format "{{.ID}}: {{.Image}} {{.Names}}"
+3d2fb2ab2ca5: jenkins-docker jenkins-docker_1
+```
+
+Then login into the image as root.
+```console
+$ docker container exec -u 0 -it jenkins-blueocean /bin/bash
+```
+
+Now you are inside the container, download the `jenkins.war` file from the official site like.
+```console
+# wget wget http://updates.jenkins-ci.org/download/war/2.444/jenkins.war
+```
+
+Replace the version with the one that fits to you.
+
+The next step is to move that file and replace the oldest one.
+```console
+# mv ./jenkins.war /usr/share/jenkins/
+```
+
+Then change permissions.
+```console
+# chown jenkins:jenkins /usr/share/jenkins/jenkins.war
+```
+
+The last step is to logout from the container and restart it.
+```console
+$ docker restart jenkins-docker_1
+```
+
+You can verify that update was successful by access to you Jenkins url.
